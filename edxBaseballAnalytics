@@ -1,0 +1,271 @@
+* this code uses the Lahman database: http://www.seanlahman.com/files/database/readme2014.txt * 
+
+* Query the batting stats of only 1927 Yankees with AB > 0 *
+SELECT * FROM Batting
+WHERE teamID = 'NYA' AND yearID = 1927 AND AB > 0;#
+
+* Batting Averages for players on the Big Red Machine - the 1975 Cincinnati Reds *
+SELECT *, H/AB AS BA
+FROM Batting
+WHERE teamID = 'CIN' AND yearID = 1975 AND AB > 0;
+
+* Adding SLG and OBP *
+SELECT *, H/AB AS BA, (H+2B+2*3B+3*HR)/AB AS SLG, (H+BB+HBP)/(AB+BB+HBP+SF) AS OBP
+FROM Batting
+WHERE teamID = 'CIN' AND yearID = 1975 AND AB > 0;
+
+* Baseball Card stats *
+SELECT playerID, yearID, teamID, G,
+	AB, H, 2B, 3B, HR, R, RBI, SB,
+	H/AB AS BA,
+	(H+BB+HBP)/(AB+BB+HBP+SF) AS OBP,
+	(H+2B+2*3B+3*HR)/AB AS SLG
+FROM Batting
+WHERE teamID = 'CIN' AND yearID = 1975 AND AB > 50;
+
+* Just for Johnny Bench *
+SELECT playerID, yearID, teamID, G,
+	AB, H, 2B, 3B, HR, R, RBI, SB,
+	H/AB AS BA,
+	(H+BB+HBP)/(AB+BB+HBP+SF) AS OBP,
+	(H+2B+2*3B+3*HR)/AB AS SLG
+FROM Batting
+WHERE playerID = 'benchjo01';
+
+* 1998 wOBA leaders *
+SELECT playerID, 
+      	yearID, 
+      	teamID, 
+      	(0.713*(BB-IBB) + 0.742*HBP + 0.898*(H-2B-3B-HR) + 1.257*2B + 1.580*3B + 2.007*HR) / 
+        (AB + BB - IBB + SF + HBP) AS wOBA
+FROM Batting
+WHERE yearID = 1998 AND AB > 300
+ORDER BY wOBA DESC
+
+* 2014 FIP Leaders * 
+SELECT playerID, SO AS Strikeouts, BB as Walks, HR as HomeRuns, (3*BB + 3*HBP + 13*HR - 2*SO)/(IPOuts/3) + 3.132 AS FIP
+          FROM Pitching
+          WHERE yearID = 2014;
+          
+* Three True Outcome Batting Leaders in 2000 *
+SELECT playerID, (BB + SO + HR)/(AB + BB + SF + SH + HBP) AS TTOPercentage
+FROM Batting
+WHERE yearID = 2000 AND AB >= 500
+ORDER BY TTOPercentage desc
+
+* Career Home Run Totals *
+SELECT playerID, SUM(HR) AS Career_HR
+FROM Batting
+GROUP BY playerID
+
+* Top 30 Players in Career K's *
+SELECT playerID, SUM(SO) AS Career_SO
+FROM Batting
+GROUP BY playerID
+ORDER BY SUM(SO) DESC, playerID
+LIMIT 30
+
+* Most K's in the Last 30 Years * 
+SELECT yearID, SUM(SO) AS League_SO
+FROM Batting
+GROUP BY yearID
+ORDER BY SUM(SO) DESC
+LIMIT 30
+
+* Yearly K Leaders *
+SELECT yearID, MAX(SO) AS Leading_SO
+FROM Batting
+GROUP BY yearID
+ORDER BY yearID DESC
+
+* Average Homers for Players with Between 450-500 ABs Since 1950 *
+SELECT yearID, AVG(HR) AS Average_HR
+FROM Batting
+WHERE AB > 450 AND AB < 500 AND yearID >= 1950
+GROUP BY yearID
+ORDER BY AVG(HR) DESC, yearID DESC
+
+* Various Stats Since 1930 * 
+SELECT yearID,
+SUM(H)/SUM(AB) AS League_AVG,
+AVG(HR) AS Average_HR,
+MIN(SB) AS Worst_SB,
+MAX(W/(W+L)) AS Best_WP
+FROM Teams
+WHERE yearID >= 1930
+GROUP BY yearID
+ORDER BY SUM(H)/SUM(AB) DESC, yearID
+LIMIT 30
+
+* 2001 Mariners' Slash Stats Plus OPS * 
+SELECT playerID,
+H/AB AS BA,
+(H+BB+HBP)/(AB+BB+HBP+SF) AS OBP, 
+(H+2B+2*3B+3*HR)/AB AS SLG,
+(H+BB+HBP)/(AB+BB+HBP+SF) + (H+2B+2*3B+3*HR)/AB AS OPS
+FROM Batting
+WHERE teamID = 'SEA' AND yearID = 2001 AND AB >= 100
+ORDER BY (H+BB+HBP)/(AB+BB+HBP+SF) + (H+2B+2*3B+3*HR)/AB
+
+* Team Home Run Leaders with 45+ Homers *
+SELECT teamID, yearID, MAX(HR) AS Leading_HR
+FROM Batting
+GROUP BY teamID, yearID
+HAVING MAX(HR) >= 45
+ORDER BY MAX(HR) DESC, yearID, teamID
+
+* Pitchers with a Better K/BB% than Kershaw's 2014 Since 1990 *
+SELECT playerID,
+yearID,
+teamID,
+(SO - BB)/BFP AS K_Minus_BB
+FROM Pitching
+WHERE IPOuts >= 450 AND yearID >= 1990
+HAVING K_Minus_BB > (SELECT (SO-BB)/BFP
+FROM Pitching
+WHERE yearID = 2014 AND playerID = 'kershcl01')
+ORDER BY (SO-BB)/BFP DESC
+
+* Comparing Offense From Different Eras *
+SELECT teamID, yearID, R/G, (H+2B+2*3B+3*HR)/AB AS Team_SLG
+FROM Teams
+WHERE yearID = 1968 OR yearID = 2000
+ORDER BY Team_SLG
+
+* Outperforming Run Scoring Environments *
+SELECT 
+       	SUM(R)/SUM(G) as LeagueRunAverage, 
+       	yearID, 
+       	(MAX(R/G))/(SUM(R)/SUM(G)) as BestOffenseRatio, 
+       	SUM(R)/SUM(G)*(MAX(R/G))/(SUM(R)/SUM(G)) as BestOffenseRunAverage
+FROM Teams
+WHERE yearID >= 1961
+GROUP BY yearID
+ORDER BY BestOffenseRatio DESC
+
+* Underperforming Run Scoring Environments *
+SELECT 
+       	SUM(R)/SUM(G) as LeagueRunAverage, 
+       	yearID, 
+       	(MIN(R/G))/(SUM(R)/SUM(G)) as WorstOffenseRatio, 
+       	SUM(R)/SUM(G)*(MIN(R/G))/(SUM(R)/SUM(G)) as WorstOffenseRunAverage
+FROM Teams
+WHERE yearID >= 1961
+GROUP BY yearID
+ORDER BY WorstOffenseRatio 
+
+* Most Team K's *
+SELECT 
+       	SUM(SO)/SUM(G) as LeagueKRate, 
+       	(MAX(SO/G)) as HighestKRate,
+        yearID
+FROM Teams
+WHERE yearID >= 1961
+GROUP BY yearID
+ORDER BY HighestKRate DESC
+
+* Highest Team K Ratios *
+SELECT 
+       	SUM(SO)/SUM(G) as LeagueKRate,  
+       	(MAX(SO/G)) as HighestKRate,
+        yearID,
+        (MAX(SO/G))/(SUM(SO)/SUM(G)) as HighestKRatio
+FROM Teams
+WHERE yearID >= 1961
+GROUP BY yearID
+ORDER BY HighestKRatio DESC
+
+* Expected Performance with Bill James Pythagorean Win% * 
+SELECT teamID, yearID, W, L, W/(W+L) as Winning_Percentage, R, RA, R-RA as Run_Differential, 
+(R-RA)/G as Run_Diff_Per_Game, (R*R)/(R*R+RA*RA) as BillJames
+FROM Teams
+WHERE yearID > 1900 AND W/(W+L) > .700
+ORDER BY W/(W+L) DESC, teamID, yearID
+
+* Actual Win% Compared to Expected Win% *
+SELECT teamID, yearID, W, L, W/(W+L) as Winning_Percentage, R, RA, R-RA as Run_Differential, 
+(R-RA)/G as Run_Diff_Per_Game, (R*R)/(R*R+RA*RA) as BillJames, (R*R)/(R*R+RA*RA)-W/(W+L) as JamesMinusActual 
+FROM Teams
+WHERE yearID > 1900 AND W/(W+L) > .700
+ORDER BY JamesMinusActual DESC, teamID, yearID
+
+* Dodgers Pythagorean Win% Error Since 1980 * 
+SELECT teamID,
+yearID,
+W, 
+G*(R*R)/(R*R + RA*RA) AS predictedW,
+(G*(R*R)/(R*R + RA*RA) - W) AS Error
+FROM Teams
+WHERE teamID = 'LAN' AND yearID >= 1980
+ORDER BY Error DESC
+
+* Pythagorean Win% Error Since 1955 *
+SELECT w.yearID, MIN(w.Error) AS MINError, MAX(w.Error) AS MAXError, ROUND(STDDEV(w.Error),3) AS STDError
+FROM (
+     SELECT teamID, yearID, W,
+        G*(R*R)/(R*R + RA*RA) AS predictedW,
+        (G*(R*R)/(R*R + RA*RA) - W) AS Error
+     FROM Teams
+     WHERE yearID >= 1955
+     ) w
+GROUP BY w.yearID
+ORDER BY STDError DESC
+
+* 1998 Braves Pitching Stats Using a Join *
+SELECT CONCAT(m.nameFirst, ' ', m.nameLast) AS Name, ERA, (-2*SO + 3*HBP + 3*BB + 13*HR)/(IPOuts/3) + 3.139 AS FIP
+FROM Pitching p
+JOIN Master m
+ON m.playerID = p.playerID
+WHERE teamID = 'ATL' AND yearID = 1998 AND GS >= 10
+ORDER BY (ERA - FIP) DESC
+
+* Pedro Martinez's Pitching Stats/Join *
+SELECT CONCAT(m.NameFirst, ' ', m.NameLast) AS Name, yearID, ERA, (-2*SO + 3*HBP + 3*BB + 13*HR)/(IPOuts/3) + 3.139 AS FIP
+FROM Pitching p
+JOIN Master m
+ON m.playerID = p.playerID
+WHERE NameFirst = 'Pedro' AND NameLast = 'Martinez'
+ORDER BY (ERA - FIP) DESC
+
+* Batting Averages for Pitchers *
+SELECT b.yearID, SUM(b.H) AS Total_H, SUM(b.AB) AS Total_AB, SUM(b.H)/SUM(b.AB) AS League_AVG
+FROM Batting b JOIN Pitching p
+ON b.playerID = p.playerID AND
+b.yearID = p.yearID AND
+b.stint = p.stint
+GROUP BY yearID
+ORDER BY League_AVG DESC, yearID
+
+* Fan Attendance Per Payroll Dollar Spent on Players/Nested Query * 
+SELECT t.yearID, t.teamID, t.attendance, s.Payroll, t.attendance/s.Payroll AS FansPerDollar
+FROM Teams t
+JOIN (
+     SELECT yearID, teamID, SUM(salary) AS Payroll
+     FROM Salaries
+     GROUP BY yearID, teamID
+     ) s
+ON t.yearID = s.yearID
+  AND t.teamID = s.teamID
+ORDER BY FansPerDollar 
+
+* Finding Players from Specific Locations * 
+SELECT CONCAT(m.nameFirst, ' ', m.nameLast) AS playerName, m.BirthCountry AS Country,
+          p.yearID AS Year, p.IPOuts/3 AS IP, p.ERA AS ERA, (3*BB + 3*HBP + 13*HR - 2*SO)/(IPOuts/3) + 3.2 AS FIP
+FROM Pitching p
+JOIN Master m
+ON p.playerID = m.playerID
+WHERE m.BirthCountry = "Venezuela" AND p.IPOuts > 180
+
+* Slash Stats for MVP Winners Since 1990 *
+SELECT CONCAT(m.nameFirst, " ", m.nameLast) AS playerName,
+  b.yearID AS Year, 
+  H/AB AS BA,
+  (H+BB+HBP)/(AB+BB+HBP+SF) AS OBP,
+  (H+2B+2*3B+3*HR)/AB AS SLG
+FROM Batting b
+JOIN Master m
+  ON b.playerID = m.playerID
+JOIN AwardsPlayers a
+ON a.playerID = b.playerID AND a.yearID = b.yearID
+WHERE a.awardID = 'Most Valuable Player' AND b.yearID > 1990
+ORDER BY SLG DESC, b.playerID
