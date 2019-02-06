@@ -269,3 +269,12 @@ JOIN AwardsPlayers a
 ON a.playerID = b.playerID AND a.yearID = b.yearID
 WHERE a.awardID = 'Most Valuable Player' AND b.yearID > 1990
 ORDER BY SLG DESC, b.playerID
+
+* Most Total Bases in a Postseason in a Year When the Player Was an All-Star *
+SELECT a.playerID, a.yearID, a.startingPOS, SUM(b.H + b.2B + 2*b.3B + 3*b.HR) AS Post_TB
+FROM BattingPost as b 
+RIGHT JOIN AllstarFull as a
+ON b.playerID = a.playerID AND b.yearID = a.yearID
+WHERE a.yearID >= 1950
+GROUP BY playerID, yearID
+ORDER BY Post_TB DESC, playerID, yearID
