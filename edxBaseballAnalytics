@@ -278,3 +278,18 @@ ON b.playerID = a.playerID AND b.yearID = a.yearID
 WHERE a.yearID >= 1950
 GROUP BY playerID, yearID
 ORDER BY Post_TB DESC, playerID, yearID
+
+* Lowest Percentage of Earned Runs of Total Runs *
+SELECT playerID, 9*SUM(ER)/(SUM(IPOuts)/3) AS ERA, 9*SUM(R)/(SUM(IPOuts)/3) AS RA9, SUM(ER)/SUM(R) AS ERPercentage
+FROM Pitching
+WHERE yearID >= 2000 AND yearID < 2010
+GROUP BY playerID
+HAVING SUM(IPOuts) >= 3000
+ORDER BY ERPercentage, playerID
+
+* Pitching Game Scores since 1980 * 
+SELECT playerID, yearID, 
+(50*GS + IPOuts + SO - 2*H - 4*ER - 2*(R-ER) - BB + 2*(IPOuts/3 - GS*4))/GS AS GameScore
+FROM Pitching
+WHERE yearID >= 1980 AND GS > 20
+ORDER BY GameScore DESC, playerID, yearID
